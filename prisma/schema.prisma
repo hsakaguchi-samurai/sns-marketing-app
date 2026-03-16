@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects  Project[]
+  scripts   Script[]
+  captions  Caption[]
+  posts     Post[]
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  platform  String   // tiktok, instagram, both
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  scripts   Script[]
+  captions  Caption[]
+  posts     Post[]
+}
+
+model Script {
+  id          String   @id @default(cuid())
+  title       String
+  reference   String?  @db.Text // バズ動画の参考情報
+  hook        String?  @db.Text // 冒頭のフック
+  body        String?  @db.Text // 本編
+  cta         String?  @db.Text // CTA
+  fullScript  String?  @db.Text // 完成台本
+  platform    String   // tiktok, instagram
+  status      String   @default("draft") // draft, ready, used
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Caption {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  hashtags  String[] // ハッシュタグ配列
+  platform  String   // tiktok, instagram
+  tone      String?  // カジュアル, ビジネス, etc
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Post {
+  id            String   @id @default(cuid())
+  title         String
+  platform      String
+  postedAt      DateTime
+  views         Int      @default(0)
+  likes         Int      @default(0)
+  comments      Int      @default(0)
+  shares        Int      @default(0)
+  saves         Int      @default(0)
+  followers     Int      @default(0) // 投稿時のフォロワー数
+  engagementRate Float?
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
