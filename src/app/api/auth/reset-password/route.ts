@@ -27,7 +27,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Reset password error:", error);
-    return NextResponse.json({ error: "パスワードの再設定に失敗しました" }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Reset password error:", message);
+    return NextResponse.json({ error: `パスワードの再設定に失敗しました: ${message}` }, { status: 500 });
   }
 }
