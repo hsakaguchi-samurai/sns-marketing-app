@@ -7,14 +7,18 @@ import {
   LayoutDashboard,
   FileText,
   MessageSquare,
+  Images,
   BarChart3,
   FolderOpen,
+  Video,
   LogOut,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
+  { href: "/references", label: "参考動画ライブラリ", icon: Video },
   { href: "/scripts", label: "企画・台本作成", icon: FileText },
+  { href: "/carousels", label: "カルーセル作成", icon: Images },
   { href: "/captions", label: "キャプション・タグ", icon: MessageSquare },
   { href: "/analytics", label: "数値分析", icon: BarChart3 },
   { href: "/projects", label: "プロジェクト", icon: FolderOpen },

@@ -53,10 +53,14 @@ export function ProjectSelector({
     );
   }
 
+  const selected = projects.find((p) => p.id === value);
+
   return (
     <Select value={value} onValueChange={(v) => { if (v) onChange(v); }}>
       <SelectTrigger className="w-[250px]">
-        <SelectValue placeholder="プロジェクトを選択" />
+        <SelectValue placeholder="プロジェクトを選択">
+          {selected ? `${selected.name} (${selected.platform})` : "プロジェクトを選択"}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {projects.map((p) => (

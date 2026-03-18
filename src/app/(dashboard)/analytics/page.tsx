@@ -33,6 +33,10 @@ import {
   MessageCircle,
   Share2,
   Bookmark,
+  Pencil,
+  Trash2,
+  X,
+  Save,
 } from "lucide-react";
 
 type Post = {
@@ -65,11 +69,20 @@ export default function AnalyticsPage() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [error, setError] = useState("");
 
+  // 編集
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: "", platform: "tiktok", postedAt: "",
+    views: "", likes: "", comments: "", shares: "", saves: "", followers: "",
+  });
+  const [saving, setSaving] = useState(false);
+
   // Form state
   const [form, setForm] = useState({
     title: "",
     platform: "tiktok",
     postedAt: "",
+    measuredAt: "48h",
     views: "",
     likes: "",
     comments: "",
@@ -100,6 +113,7 @@ export default function AnalyticsPage() {
           shares: Number(form.shares) || 0,
           saves: Number(form.saves) || 0,
           followers: Number(form.followers) || 0,
+          notes: `計測タイミング: ${form.measuredAt}`,
           projectId: selectedProject,
         }),
       });
@@ -110,6 +124,7 @@ export default function AnalyticsPage() {
         title: "",
         platform: "tiktok",
         postedAt: "",
+        measuredAt: "48h",
         views: "",
         likes: "",
         comments: "",
@@ -142,6 +157,62 @@ export default function AnalyticsPage() {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleEdit = (post: Post) => {
+    setEditingId(post.id);
+    setEditForm({
+      title: post.title,
+      platform: post.platform,
+      postedAt: new Date(post.postedAt).toISOString().split("T")[0],
+      views: String(post.views),
+      likes: String(post.likes),
+      comments: String(post.comments),
+      shares: String(post.shares),
+      saves: String(post.saves),
+      followers: "0",
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/posts/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editForm.title,
+          platform: editForm.platform,
+          postedAt: editForm.postedAt,
+          views: Number(editForm.views) || 0,
+          likes: Number(editForm.likes) || 0,
+          comments: Number(editForm.comments) || 0,
+          shares: Number(editForm.shares) || 0,
+          saves: Number(editForm.saves) || 0,
+          followers: Number(editForm.followers) || 0,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setPosts((prev) => prev.map((p) => (p.id === editingId ? data.post : p)));
+      setEditingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "更新に失敗しました");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("この投稿データを削除しますか？")) return;
+    try {
+      const res = await fetch(`/api/posts/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("削除に失敗しました");
+      setPosts((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "削除に失敗しました");
     }
   };
 
@@ -199,6 +270,13 @@ export default function AnalyticsPage() {
             <CardTitle className="text-lg">投稿データを追加</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm font-medium text-blue-800">計測タイミングについて</p>
+              <p className="text-xs text-blue-600 mt-1">
+                数値を正しく比較するために、全ての投稿で同じタイミングのデータを入力してください。
+                おすすめは<strong>投稿から48時間後</strong>の数値です。初速の比較がしやすく、アルゴリズムの評価にも近い指標になります。
+              </p>
+            </div>
             <form onSubmit={handleAddPost} className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="col-span-2 md:col-span-3 space-y-2">
                 <Label>投稿タイトル *</Label>
@@ -231,6 +309,25 @@ export default function AnalyticsPage() {
                   onChange={(e) => setForm({ ...form, postedAt: e.target.value })}
                   required
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>計測タイミング</Label>
+                <Select
+                  value={form.measuredAt}
+                  onValueChange={(v) => { if (v) setForm({ ...form, measuredAt: v }); }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24h">投稿から24時間後</SelectItem>
+                    <SelectItem value="48h">投稿から48時間後（推奨）</SelectItem>
+                    <SelectItem value="72h">投稿から72時間後</SelectItem>
+                    <SelectItem value="7d">投稿から7日後</SelectItem>
+                    <SelectItem value="30d">投稿から30日後</SelectItem>
+                    <SelectItem value="latest">最新の数値</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>再生数</Label>
@@ -336,6 +433,7 @@ export default function AnalyticsPage() {
                   <TableHead className="text-right">いいね</TableHead>
                   <TableHead className="text-right">コメント</TableHead>
                   <TableHead className="text-right">ER%</TableHead>
+                  <TableHead className="text-right w-[100px]">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -360,10 +458,87 @@ export default function AnalyticsPage() {
                     <TableCell className="text-right">
                       {post.engagementRate != null ? `${post.engagementRate.toFixed(2)}%` : "-"}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(post)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(post.id)} className="text-gray-400 hover:text-red-500">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 編集フォーム */}
+      {editingId && (
+        <Card className="border-blue-200">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">投稿データを編集</CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="col-span-2 md:col-span-3 space-y-2">
+                <Label>投稿タイトル</Label>
+                <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>プラットフォーム</Label>
+                <Select value={editForm.platform} onValueChange={(v) => { if (v) setEditForm({ ...editForm, platform: v }); }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tiktok">TikTok</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>投稿日</Label>
+                <Input type="date" value={editForm.postedAt} onChange={(e) => setEditForm({ ...editForm, postedAt: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>再生数</Label>
+                <Input type="number" value={editForm.views} onChange={(e) => setEditForm({ ...editForm, views: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>いいね数</Label>
+                <Input type="number" value={editForm.likes} onChange={(e) => setEditForm({ ...editForm, likes: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>コメント数</Label>
+                <Input type="number" value={editForm.comments} onChange={(e) => setEditForm({ ...editForm, comments: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>シェア数</Label>
+                <Input type="number" value={editForm.shares} onChange={(e) => setEditForm({ ...editForm, shares: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>保存数</Label>
+                <Input type="number" value={editForm.saves} onChange={(e) => setEditForm({ ...editForm, saves: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>フォロワー数</Label>
+                <Input type="number" value={editForm.followers} onChange={(e) => setEditForm({ ...editForm, followers: e.target.value })} />
+              </div>
+              <div className="col-span-2 md:col-span-3 flex gap-2">
+                <Button onClick={handleSaveEdit} disabled={saving}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? "保存中..." : "変更を保存"}
+                </Button>
+                <Button variant="outline" onClick={() => setEditingId(null)}>キャンセル</Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

@@ -15,10 +15,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects  Project[]
-  scripts   Script[]
-  captions  Caption[]
-  posts     Post[]
+  projects        Project[]
+  scripts         Script[]
+  captions        Caption[]
+  posts           Post[]
+  referenceVideos ReferenceVideo[]
+  carousels       Carousel[]
 }
 
 model Project {
@@ -31,9 +33,28 @@ model Project {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  scripts   Script[]
-  captions  Caption[]
-  posts     Post[]
+  scripts         Script[]
+  captions        Caption[]
+  posts           Post[]
+  referenceVideos ReferenceVideo[]
+  carousels       Carousel[]
+}
+
+model ReferenceVideo {
+  id          String   @id @default(cuid())
+  url         String   // 動画URL
+  title       String   // 動画タイトル・メモ
+  platform    String   // tiktok, instagram
+  transcript  String?  @db.Text // 文字起こし
+  analysis    String?  @db.Text // AI分析結果
+  tags        String[] // タグ（ジャンル分類用）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model Script {
@@ -68,6 +89,25 @@ model Caption {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   projectId String
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Carousel {
+  id          String   @id @default(cuid())
+  title       String
+  topic       String   // テーマ
+  slideCount  Int      @default(10)
+  slides      Json     // スライドデータ [{slideNumber, heading, body, designNote}]
+  caption     String?  @db.Text // 投稿キャプション
+  hashtags    String[] // ハッシュタグ
+  style       String?  // デザインスタイル
+  status      String   @default("draft") // draft, ready, posted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model Post {
