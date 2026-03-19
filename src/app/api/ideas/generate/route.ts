@@ -13,6 +13,8 @@ export async function POST(req: Request) {
 
   try {
     const result = await generateIdeas({ platform, topic, style, target, count });
+    console.log("generateIdeas result keys:", Object.keys(result));
+    console.log("ideas is array:", Array.isArray(result.ideas), "length:", result.ideas?.length);
     return NextResponse.json({
       trendAnalysis: result.trendAnalysis || "",
       ideas: Array.isArray(result.ideas) ? result.ideas : [],

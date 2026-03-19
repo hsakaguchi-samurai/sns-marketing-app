@@ -26,6 +26,7 @@ import {
   ChevronUp,
   CheckSquare,
   Square,
+  Trash2,
 } from "lucide-react";
 
 type ReferenceVideo = {
@@ -64,6 +65,7 @@ export default function ReferencesPage() {
 
   // 台本生成用
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [generatingScript, setGeneratingScript] = useState(false);
   const [scriptTopic, setScriptTopic] = useState("");
   const [scriptStyle, setScriptStyle] = useState("");
@@ -154,6 +156,22 @@ export default function ReferencesPage() {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {
       setGeneratingScript(false);
+    }
+  };
+
+  const handleDelete = async (videoId: string) => {
+    if (!confirm("この参考動画を削除しますか？")) return;
+    setDeletingId(videoId);
+    try {
+      const res = await fetch(`/api/references?id=${videoId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("削除に失敗しました");
+      setVideos((prev) => prev.filter((v) => v.id !== videoId));
+      selectedVideos.delete(videoId);
+      setSelectedVideos(new Set(selectedVideos));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -402,10 +420,14 @@ export default function ReferencesPage() {
                       <CardTitle className="text-base">{video.title}</CardTitle>
                       <Badge variant="secondary">{video.platform}</Badge>
                       {video.analysis && <Badge className="bg-green-100 text-green-700">分析済み</Badge>}
-                      {video.tags?.map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
-                      ))}
                     </div>
+                    {video.tags && video.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {video.tags.map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+                        ))}
+                      </div>
+                    )}
                     <a
                       href={video.url}
                       target="_blank"
@@ -417,6 +439,15 @@ export default function ReferencesPage() {
                     </a>
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(video.id)}
+                      disabled={deletingId === video.id}
+                      className="text-red-400 hover:text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"

@@ -38,35 +38,36 @@ export async function generateIdeas(params: {
 }) {
   const count = params.count || 3;
   const platformName = params.platform === "tiktok" ? "TikTok" : "Instagram Reels";
-  const prompt = `あなたは${platformName}のバズ動画に精通したSNSマーケティング専門家です。
+  const prompt = `${platformName}のSNSマーケ専門家として回答してください。
 
 【テーマ】${params.topic}
 ${params.style ? `【スタイル】${params.style}` : ""}${params.target ? `【ターゲット】${params.target}` : ""}
 
-このジャンルのバズ傾向を具体的に分析した上で、${count}つの異なる切り口の動画企画を提案してください。
-アイデアの各項目は1-2文で簡潔にしてください。`;
+必ずideasを${count}個出力してください。各項目は短く1文で。trendAnalysisも100字以内で短くまとめてください。`;
 
   return callWithTool(prompt, "output_ideas", {
     type: "object" as const,
     properties: {
-      trendAnalysis: { type: "string", description: "このジャンルのバズ傾向分析（構成パターン、人気フック、トレンド演出を3-4つ具体的に）" },
       ideas: {
         type: "array",
+        description: `必ず${count}個の企画アイデア。先にこちらを出力すること`,
+        minItems: count,
         items: {
           type: "object",
           properties: {
-            title: { type: "string", description: "企画タイトル（短く）" },
-            concept: { type: "string", description: "概要1文" },
-            hookPreview: { type: "string", description: "冒頭フック1文" },
-            approach: { type: "string", description: "切り口1文" },
-            expectedEffect: { type: "string", description: "期待効果1文" },
+            title: { type: "string", description: "企画タイトル（10字程度）" },
+            concept: { type: "string", description: "概要1文（30字以内）" },
+            hookPreview: { type: "string", description: "冒頭フック1文（30字以内）" },
+            approach: { type: "string", description: "切り口1文（30字以内）" },
+            expectedEffect: { type: "string", description: "期待効果1文（30字以内）" },
           },
           required: ["title", "concept", "hookPreview", "approach", "expectedEffect"],
         },
       },
+      trendAnalysis: { type: "string", description: "バズ傾向分析（100字以内で簡潔に）" },
     },
-    required: ["trendAnalysis", "ideas"],
-  }, 2500);
+    required: ["ideas", "trendAnalysis"],
+  }, 4096);
 }
 
 // 保存済みアイデアから完成台本を生成
